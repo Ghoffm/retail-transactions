@@ -22,6 +22,7 @@ describe RetailTransaction do
     assert_invalid_transition { tx.check_out! }
   end
 
+
   describe "still ringing up, with items" do
     before(:each) { tx.add_item("broccoli") }
 
@@ -63,6 +64,10 @@ describe RetailTransaction do
       tx.process_payment!
       assert_equal false, tx.collecting_payment?
       assert_equal true,  tx.processing_payment?
+    end
+
+    it "cannot be refunded" do
+      assert_invalid_transition { tx.refund! }
     end
   end
 
@@ -151,6 +156,35 @@ describe RetailTransaction do
 
     it "cannot be reopened" do
       assert_invalid_transition { tx.reopen! }
+    end
+
+    it "can be refunded" do
+      tx.refund!
+      assert_equal false, tx.settled?
+      assert_equal true,  tx.refunded?
+    end
+  end
+
+  describe "that is refunded" do
+    before(:each) do
+      tx.add_item("one whole hamburger")
+      tx.check_out!
+      tx.payment_info = "TOOOO MUCH MONEY"
+      tx.process_payment!
+      tx.payment_authorized!
+      tx.refund!
+    end
+
+    it "cannot be reopened" do
+      assert_invalid_transition { tx.reopen! }
+    end
+
+    it "cannot be resettled" do
+      assert_invalid_transition { tx.payment_authorized! }
+    end
+
+    it "cannot be re-refunded" do
+      assert_invalid_transition { tx.refund! }
     end
   end
 end
